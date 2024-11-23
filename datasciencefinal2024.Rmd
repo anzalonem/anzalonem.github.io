@@ -1,0 +1,363 @@
+---
+title: "Final"
+author: "Mia Anzalone & Sam Gotch"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+*Importing Data and Libraries*
+```{r}
+library(tidyverse)
+library(dplyr)
+library(plotly)
+mnprescounty2012 <- read.csv("~/Downloads/mnprescounty2012.csv", header=FALSE)
+mnprescounty2016 <- read.csv("~/Downloads/mnprescounty2016.csv", header=FALSE)
+povertyincome2012 <- read.csv("~/Downloads/2012_povertyincome.csv", header=FALSE)
+povertyincome2016 <- read.csv("~/Downloads/povertyincome_2016.csv", header=FALSE)
+```
+
+*Cleaning up dataframes*
+
+```{r}
+#Renaming Columns 
+Pres_2012 <- rename(mnprescounty2012, State = V1, County = V2, Office_ID = V4, Office_Name = V5, Cand_ID = V7, Cand_Name = V8, Party_ID = V11, Precincts_Reporting = V12, Total_Precincts = V13, Votes_For_Cand = V14, Perc_Votes_Cand_By_Office = V15, Total_Votes_For_Office = V16)
+
+Pres_2016 <- rename(mnprescounty2016, State = V1, County = V2, Office_ID = V4, Office_Name = V5, Cand_ID = V7, Cand_Name = V8, Party_ID = V11, Precincts_Reporting = V12, Total_Precincts = V13, Votes_For_Cand = V14, Perc_Votes_Cand_By_Office = V15, Total_Votes_For_Office = V16)
+#Removing NA Columns or Columns we don't need 
+Pres_Data_2012 <- select(Pres_2012,County, Office_ID,Cand_ID, Cand_Name, Precincts_Reporting, Total_Precincts, Votes_For_Cand, Total_Votes_For_Office)
+
+Pres_Data_2016 <- select(Pres_2016,County, Office_ID,Cand_ID, Cand_Name, Precincts_Reporting, Total_Precincts, Votes_For_Cand, Total_Votes_For_Office)
+
+#Converting County ID to factor so we can rename the levels for actual County name instead of number
+Pres_Data_2012$County <- as.factor(Pres_Data_2012$County)
+Pres_Data_2016$County <- as.factor(Pres_Data_2016$County)
+
+```
+
+```{r}
+#More cleaning up of other dataframes
+povinc_2012 <- rename(povertyincome2012, Poverty_All = V3, Med_Household_Inc = V21,County = V24)
+filter_2012 <- povinc_2012 %>%
+  select(Poverty_All,Med_Household_Inc,County)
+#removing first row as it contained irrelevant information
+pov_inc_2012 <- filter_2012[-c(1), ]
+
+data_2012 <- pov_inc_2012 %>%
+  mutate(County = str_remove_all(County, "County")) %>%
+  mutate(County = str_to_lower(County)) %>%
+  mutate(County = str_trim(County, side = c("both")))
+
+#Doing the same cleaning for 2016 data
+povinc_2016 <- rename(povertyincome2016,Poverty_All = V3,Med_Household_Inc = V21,County = V24)
+filter_2016 <- povinc_2016 %>%
+  select(Poverty_All, Med_Household_Inc, County)
+pov_inc_2016 <- filter_2016[-c(1), ]
+data_2016 <- pov_inc_2016 %>%
+  mutate(County = str_remove_all(County, "County")) %>%
+  mutate(County = str_to_lower(County)) %>%
+  mutate(County = str_trim(County, side = c("both")))
+
+
+```
+
+```{r}
+#renaming factor levels
+presdata2012 <- Pres_Data_2012 %>% 
+  mutate(County = fct_recode(County,
+                                "Aitkin" = "1",
+                                "Anoka" = "2",
+                                "Becker" = "3",
+                                "Beltrami" = "4",
+                                "Benton" = "5",
+                                "Big Stone" = "6",
+                                "Blue Earth" = "7",
+                                "Brown" = "8",
+                                "Carlton" = "9",
+                                "Carver" = "10",
+                                "Cass" = "11",
+                                "Chippewa" = "12",
+                                "Chisago" = "13",
+                                "Clay" = "14",
+                                "Clearwater" = "15",
+                                "Cook" = "16",
+                                "Cottonwood" = "17",
+                                "Crow Wing" = "18",
+                                "Dakota" = "19",
+                                "Dodge" = "20",
+                                "Douglas" = "21",
+                                "Faribault" = "22",
+                                "Fillmore" = "23",
+                                "Freeborn" = "24",
+                                "Goodhue" = "25",
+                                "Grant" = "26",
+                                "Hennepin" = "27",
+                                "Houston" = "28",
+                                "Hubbard" = "29",
+                                "Isanti" = "30",
+                                "Itasca" = "31",
+                                "Jackson" = "32",
+                                "Kanabec" = "33",
+                                "Kandiyohi" = "34",
+                                "Kittson" = "35",
+                                "Koochiching" = "36",
+                                "Lac qui Parle" = "37",
+                                "Lake" = "38",
+                                "Lake of the Woods" = "39",
+                                "Le Sueur" = "40",
+                                "Lincoln" = "41",
+                                "Lyon" = "42",
+                                "McLeod" = "43",
+                                "Mahnomen" = "44",
+                                "Marshall" = "45",
+                                "Martin" = "46",
+                                "Meeker" = "47",
+                                "Mille Lacs" = "48",
+                                "Morrison" = "49",
+                                "Mower" = "50",
+                                "Murray" = "51",
+                                "Nicollet" = "52",
+                                "Nobles" = "53",
+                                "Norman" = "54",
+                                "Olmsted" = "55",
+                                "Otter Tail" = "56",
+                                "Pennington" = "57",
+                                "Pine" = "58",
+                                "Pipestone" = "59",
+                                "Polk" = "60",
+                                "Pope" = "61",
+                                "Ramsey" = "62",
+                                "Red Lake" = "63",
+                                "Redwood" = "64",
+                                "Renville" = "65",
+                                "Rice" = "66",
+                                "Rock" = "67",
+                                "Roseau" = "68",
+                                "Saint Louis" = "69",
+                                "Scott" = "70",
+                                "Sherburne" = "71",
+                                "Sibley" = "72",
+                                "Stearns" = "73",
+                                "Steele" = "74",
+                                "Stevens" = "75",
+                                "Swift" = "76",
+                                "Todd" = "77",
+                                "Traverse" = "78",
+                                "Wabasha" = "79",
+                                "Wadena" = "80",
+                                "Waseca" = "81",
+                                "Washington" = "82",
+                                "Watonwan" = "83",
+                                "Wilkin" = "84",
+                                "Winona" = "85",
+                                "Wright" = "86",
+                                "Yellow Medicine" = "87"
+                                
+                                )) %>%
+   mutate(County = str_to_lower(County)) %>%
+   mutate(County = str_remove_all(County, "//s"))
+
+presdata2016 <- Pres_Data_2016 %>% 
+  mutate(County = fct_recode(County,
+                                "Aitkin" = "1",
+                                "Anoka" = "2",
+                                "Becker" = "3",
+                                "Beltrami" = "4",
+                                "Benton" = "5",
+                                "Big Stone" = "6",
+                                "Blue Earth" = "7",
+                                "Brown" = "8",
+                                "Carlton" = "9",
+                                "Carver" = "10",
+                                "Cass" = "11",
+                                "Chippewa" = "12",
+                                "Chisago" = "13",
+                                "Clay" = "14",
+                                "Clearwater" = "15",
+                                "Cook" = "16",
+                                "Cottonwood" = "17",
+                                "Crow Wing" = "18",
+                                "Dakota" = "19",
+                                "Dodge" = "20",
+                                "Douglas" = "21",
+                                "Faribault" = "22",
+                                "Fillmore" = "23",
+                                "Freeborn" = "24",
+                                "Goodhue" = "25",
+                                "Grant" = "26",
+                                "Hennepin" = "27",
+                                "Houston" = "28",
+                                "Hubbard" = "29",
+                                "Isanti" = "30",
+                                "Itasca" = "31",
+                                "Jackson" = "32",
+                                "Kanabec" = "33",
+                                "Kandiyohi" = "34",
+                                "Kittson" = "35",
+                                "Koochiching" = "36",
+                                "Lac qui Parle" = "37",
+                                "Lake" = "38",
+                                "Lake of the Woods" = "39",
+                                "Le Sueur" = "40",
+                                "Lincoln" = "41",
+                                "Lyon" = "42",
+                                "McLeod" = "43",
+                                "Mahnomen" = "44",
+                                "Marshall" = "45",
+                                "Martin" = "46",
+                                "Meeker" = "47",
+                                "Mille Lacs" = "48",
+                                "Morrison" = "49",
+                                "Mower" = "50",
+                                "Murray" = "51",
+                                "Nicollet" = "52",
+                                "Nobles" = "53",
+                                "Norman" = "54",
+                                "Olmsted" = "55",
+                                "Otter Tail" = "56",
+                                "Pennington" = "57",
+                                "Pine" = "58",
+                                "Pipestone" = "59",
+                                "Polk" = "60",
+                                "Pope" = "61",
+                                "Ramsey" = "62",
+                                "Red Lake" = "63",
+                                "Redwood" = "64",
+                                "Renville" = "65",
+                                "Rice" = "66",
+                                "Rock" = "67",
+                                "Roseau" = "68",
+                                "Saint Louis" = "69",
+                                "Scott" = "70",
+                                "Sherburne" = "71",
+                                "Sibley" = "72",
+                                "Stearns" = "73",
+                                "Steele" = "74",
+                                "Stevens" = "75",
+                                "Swift" = "76",
+                                "Todd" = "77",
+                                "Traverse" = "78",
+                                "Wabasha" = "79",
+                                "Wadena" = "80",
+                                "Waseca" = "81",
+                                "Washington" = "82",
+                                "Watonwan" = "83",
+                                "Wilkin" = "84",
+                                "Winona" = "85",
+                                "Wright" = "86",
+                                "Yellow Medicine" = "87"
+                                
+                                )) %>%
+   mutate(County = str_to_lower(County))
+
+
+```
+
+```{r}
+#Making Interactive Map
+
+#Could choose the county and find information based on what county you chose.
+
+#Also a graph that shows some type of change over time and we make a inference from that?? If any states swung a certain way/any changes in poverty???
+
+```
+
+```{r}
+#Joining Data
+all_data_2012 <- full_join(presdata2012, data_2012)
+
+all_data_2016 <- full_join(presdata2016, data_2016)
+
+```
+
+```{r}
+#Filtering candidates down to only republican/democrat main. tickets
+
+new_2012 <- all_data_2012 %>%
+  filter(Cand_ID %in% c(401,301))
+
+new_2016 <- all_data_2016 %>%
+  filter(Cand_ID %in% c(401,301))
+```
+
+```{r}
+#Filtering data for there to be 1 row for each county; keeping the row with whichever candidate won that county
+final_2012 <- new_2012 %>%
+  group_by(County) %>%
+  slice_max(order_by = Votes_For_Cand, n = 1, with_ties = FALSE) %>%
+  ungroup()
+#Doing same thing for 2016 dataset
+
+final_2016 <- new_2016 %>%
+  group_by(County) %>%
+  slice_max(order_by = Votes_For_Cand, n = 1, with_ties = FALSE) %>%
+  ungroup()
+```
+
+```{r}
+library(shiny)
+library(leaflet)
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(patchwork)
+county_df <- map_data("county")
+counties <- county_df %>%
+  filter(region == "minnesota") 
+  
+  
+counties_new <- rename(counties, County = subregion)
+
+counties_final <- counties_new %>%
+  select(long, lat, County, group) %>%
+  mutate(County = fct_recode(County,
+                             "saint louis" = "st louis"
+                             ))
+  
+
+
+```
+
+```{r}
+#Joining long/lat data with previous datasets for each year to create interactive maps.
+
+joined_2012 <- full_join(final_2012, counties_final)
+
+joined_2012$Cand_Name <- as.factor(joined_2012$Cand_Name)
+
+#Same for 2016 data
+
+joined_2016 <- full_join(final_2016, counties_final)
+  
+
+```
+
+```{r}
+#Making both plots for each year
+mn_2012 <- ggplot(joined_2012, aes(x = long, y = lat, group = group )) +
+  geom_polygon(color = "black",aes(fill = Cand_Name, text = paste(
+          "County:",County, "<br>",
+          "Number of Individuals in Poverty:",Poverty_All, "<br>",
+          "Median Income:$",Med_Household_Inc, "<br>",
+          "Candidate: ", Cand_Name))) +
+  scale_fill_manual(values = c("#0015bc", "#ff0000")) +
+  theme(axis.title.x.bottom = element_blank(), axis.title.y.left = element_blank()) +
+  labs(title = "2012 Election Minnesota", legend = "Candidate Name", fill = "Candidate Names") +
+  theme_void()
+  
+mn_2016 <- ggplot(joined_2016, aes(x = long, y = lat, group = group )) +
+  geom_polygon(color = "black",aes(fill = Cand_Name)) +
+  scale_fill_manual(values = c("#ff0000", "#0015bc")) +
+  theme(axis.title.x.bottom = element_blank(), axis.title.y.left = element_blank()) +
+  labs(title = "2016 Election Minnesota", legend = "Candidate Name", fill = "Candidate Names") +
+  theme_void()
+
+
+ggplotly(mn_2012)  
+
+```
+
+
+
+
